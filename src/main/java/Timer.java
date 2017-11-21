@@ -12,15 +12,15 @@ class Timer {
      * {@code true}. */
     private double mInterval;
 
-    /** Used to store the time at which the {@code Timer} was started. This value is used in conjunction with
-     * {@code mInterval} to determine whether the timer has elapsed or not when {@code hasElapsed()} is called. */
+    /** Used to store the time at which the {@code Timer} was started (see {@code start()}). This value is used in
+     *  conjunction with {@code mInterval} to determine whether the timer has elapsed or not when {@code hasElapsed()}
+     *  is called. */
     private long mStartTime;
 
     /**
      * Instantiates the {@code Timer} using the default interval time (see {@code DEFAULT_INTERVAL}).
      */
-    Timer()
-    {
+    Timer() {
         this(DEFAULT_INTERVAL);
     }
 
@@ -28,8 +28,7 @@ class Timer {
      * Instantiates the {@code Timer} using the specified interval time.
      * @param interval interval time (in seconds).
      */
-    Timer(final double interval)
-    {
+    Timer(final double interval) {
         mInterval = interval;
         mStartTime = System.nanoTime();
     }
@@ -38,17 +37,23 @@ class Timer {
      * Sets the '{@code Timer}'s interval.
      * @param interval interval time (in seconds).
      */
-    void setInterval(double interval)
-    {
-        mInterval = interval;
+    void setInterval(double interval) {
+        mInterval = Math.abs(interval);
+    }
+
+    /**
+     * Returns the '{@code Timer}'s interval.
+     * @return '{@code Timer}'s interval.
+     */
+    double getInterval() {
+        return mInterval;
     }
 
     /**
      * Returns the amount of time remaining before the {@code Timer} elapses (in seconds).
      * @return Amount of time remaining before the {@code Timer} elapses (in seconds).
      */
-    double getTimeRemaining()
-    {
+    double getTimeRemaining() {
         double timeRemaining = mInterval - (convertNanoSecondsToSeconds(System.nanoTime()) - convertNanoSecondsToSeconds(mStartTime));
         return timeRemaining > 0.0 ? timeRemaining : 0;
     }
@@ -57,16 +62,14 @@ class Timer {
      * Returns {@code true} if the '{@code Timer}'s interval has elapsed.
      * @return {@code true} if the '{@code Timer}'s interval has elapsed.
      */
-    boolean hasElapsed()
-    {
+    boolean hasElapsed() {
         return getTimeRemaining() == 0.0;
     }
 
     /**
      * Starts (or resets) the '{@code Timer}' (using the specified interval).
      */
-    void start()
-    {
+    void start() {
         mStartTime = System.nanoTime();
     }
 
@@ -75,8 +78,7 @@ class Timer {
      * @param nanoSeconds Nanosecond value.
      * @return Nanosecond value converted into seconds.
      */
-    private double convertNanoSecondsToSeconds(long nanoSeconds)
-    {
+    private double convertNanoSecondsToSeconds(long nanoSeconds) {
         return ((double)nanoSeconds) / 1E9;
     }
 
