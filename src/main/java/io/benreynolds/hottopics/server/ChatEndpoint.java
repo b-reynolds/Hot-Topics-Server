@@ -17,9 +17,13 @@ public class ChatEndpoint {
     private static Map<Session, Object> mUsers = new HashMap<>();
 
     @OnOpen
-    public void onOpen(Session session) {
+    public void onOpen(Session session) throws IOException {
+        String message = String.format("[%s] joined the chat room.", session.getId());
         mUsers.put(session, null);
-        System.out.println(String.format("'[%s]' joined the chat room.", session.getId()));
+        for (Map.Entry<Session, Object> entry : mUsers.entrySet()) {
+            entry.getKey().getBasicRemote().sendText(message);
+        }
+        System.out.println(message);
     }
 
     @OnMessage
@@ -27,14 +31,18 @@ public class ChatEndpoint {
         System.out.println(String.format("[%s]: %s", session.getId(), message));
         for (Map.Entry<Session, Object> entry : mUsers.entrySet()) {
             entry.getKey().getBasicRemote().sendText(String.format("[%s]: %s", session.getId(), message));
-            System.out.println(String.format("Sent '%s' to '%s'", message, entry.getKey().getId()));
+            System.out.println(String.format("Sent '%s' to '%s'.", message, entry.getKey().getId()));
         }
     }
 
     @OnClose
-    public void onClose(Session session) {
+    public void onClose(Session session) throws IOException {
+        String message = String.format("[%s] left the chat room.", session.getId());
         mUsers.remove(session);
-        System.out.println(String.format("'[%s]' left the chat room.", session.getId()));
+        for (Map.Entry<Session, Object> entry : mUsers.entrySet()) {
+            entry.getKey().getBasicRemote().sendText(message);
+        }
+        System.out.println(message);
     }
 
 }
