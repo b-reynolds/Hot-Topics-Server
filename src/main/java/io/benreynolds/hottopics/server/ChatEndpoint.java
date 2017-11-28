@@ -31,7 +31,6 @@ public class ChatEndpoint {
         System.out.println(String.format("[%s]: %s", session.getId(), message));
         for (Map.Entry<Session, Object> entry : mUsers.entrySet()) {
             entry.getKey().getBasicRemote().sendText(String.format("[%s]: %s", session.getId(), message));
-            System.out.println(String.format("Sent '%s' to '%s'.", message, entry.getKey().getId()));
         }
     }
 
