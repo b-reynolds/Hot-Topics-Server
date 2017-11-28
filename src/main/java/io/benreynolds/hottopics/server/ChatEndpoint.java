@@ -1,50 +1,40 @@
 package io.benreynolds.hottopics.server;
 
-import javax.websocket.EncodeException;
 import javax.websocket.OnClose;
 import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
+
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
 
-import static java.lang.String.format;
+import java.util.HashMap;
+import java.util.Map;
 
-@ServerEndpoint(value = "/chat", encoders = MessageEncoder.class, decoders = MessageDecoder.class)
+@ServerEndpoint("/chat")
 public class ChatEndpoint {
 
-    private static Set<Session> mPeers = Collections.synchronizedSet(new HashSet<Session>());
+    private static Map<Session, Object> mUsers = new HashMap<>();
 
     @OnOpen
     public void onOpen(Session session) {
-        System.out.println(String.format("%s joined the chat room.", session.getId()));
-        mPeers.add(session);
+        mUsers.put(session, null);
+        System.out.println(String.format("'[%s]' joined the chat room.", session.getId()));
     }
 
     @OnMessage
-    public void onMessage(Message message, Session session) throws IOException, EncodeException {
-        for (Session peer : mPeers) {
-            if (!session.getId().equals(peer.getId())) {
-                peer.getBasicRemote().sendObject(message);
-            }
+    public void onMessage(String message, Session session) throws IOException {
+        System.out.println(String.format("[%s]: %s", session.getId(), message));
+        for (Map.Entry<Session, Object> entry : mUsers.entrySet()) {
+            entry.getKey().getBasicRemote().sendText(String.format("[%s]: %s", session.getId(), message));
+            System.out.println(String.format("Sent '%s' to '%s'", message, entry.getKey().getId()));
         }
     }
 
     @OnClose
-    public void onClose(Session session) throws IOException, EncodeException {
-        System.out.println(format("%s left the chat room.", session.getId()));
-        mPeers.remove(session);
-        for (Session peer : mPeers) {
-            Message message = new Message();
-            message.setSender("Server");
-            message.setContent(format("%s left the chat room", (String) session.getUserProperties().get("user")));
-            message.setReceived(new Date());
-            peer.getBasicRemote().sendObject(message);
-        }
+    public void onClose(Session session) {
+        mUsers.remove(session);
+        System.out.println(String.format("'[%s]' left the chat room.", session.getId()));
     }
 
 }
