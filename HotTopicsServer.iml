@@ -24,5 +24,6 @@
     <orderEntry type="library" name="Maven: org.glassfish.grizzly:grizzly-http-server:2.3.3" level="project" />
     <orderEntry type="library" name="Maven: org.glassfish.grizzly:grizzly-http:2.3.3" level="project" />
     <orderEntry type="library" name="Maven: org.glassfish.grizzly:grizzly-rcm:2.3.3" level="project" />
+    <orderEntry type="library" name="Maven: javax.json:javax.json-api:1.1.2" level="project" />
   </component>
 </module>
