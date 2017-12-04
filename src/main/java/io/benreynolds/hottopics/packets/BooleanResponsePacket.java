@@ -15,6 +15,10 @@ public abstract class BooleanResponsePacket extends Packet {
         mResponse = response;
     }
 
+    /**
+     * Returns the server's response.
+     * @return Server's response.
+     */
     public boolean getResponse() {
         return mResponse;
     }
