@@ -18,7 +18,9 @@ class PacketIdentifier {
     /** Contains all known and supported {@code Packet} derivatives. */
     private static final List<Class<? extends Packet>> PACKETS = Arrays.asList(
         SendMessagePacket.class,
-        ReceiveMessagePacket.class
+        ReceiveMessagePacket.class,
+        UsernameRequestPacket.class,
+        UsernameResponsePacket.class
     );
 
     /** Current ID value. */
