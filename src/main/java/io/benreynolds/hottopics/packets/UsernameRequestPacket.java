@@ -38,4 +38,12 @@ public class UsernameRequestPacket extends Packet {
         return mId != null && mUsername != null && mUsername.matches(REGULAR_EXPRESSION);
     }
 
+    /**
+     * Return the client's requested username.
+     * @return Client's requested username.
+     */
+    public String getUsername() {
+        return mUsername;
+    }
+
 }
