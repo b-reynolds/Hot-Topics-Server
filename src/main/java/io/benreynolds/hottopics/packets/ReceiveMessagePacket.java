@@ -8,7 +8,8 @@ import com.google.gson.annotations.SerializedName;
 public class ReceiveMessagePacket extends Packet {
 
     /** Attempts to store a the '{@code SendMessagePacket}'s ID (as determined by the {@code PacketIdentifier}). */
-    public static final Integer ID = PacketIdentifier.PACKET_IDS.containsKey(ReceiveMessagePacket.class) ? PacketIdentifier.PACKET_IDS.get(ReceiveMessagePacket.class) : null;
+    public static final Integer ID = PacketIdentifier.PACKET_IDS.getOrDefault(ReceiveMessagePacket.class,
+            null);
 
     /** Client's name. */
     @SerializedName("author")
