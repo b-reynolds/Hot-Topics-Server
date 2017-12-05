@@ -2,6 +2,10 @@ package io.benreynolds.hottopics.packets;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * {@code BooleanResponsePacket} is a generic boolean response packet implementation used by packets such as
+ * {@code JoinChatroomResponsePacket} and {@code UsernameResponsePacket}.
+ */
 public abstract class BooleanResponsePacket extends Packet {
 
     /** Server's response. */
@@ -11,7 +15,7 @@ public abstract class BooleanResponsePacket extends Packet {
     /**
      * @param response Server's response.
      */
-    public BooleanResponsePacket(final boolean response) {
+    BooleanResponsePacket(final boolean response) {
         mResponse = response;
     }
 
