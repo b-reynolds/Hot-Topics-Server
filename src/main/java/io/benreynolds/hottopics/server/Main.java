@@ -1,11 +1,13 @@
 package io.benreynolds.hottopics.server;
 
+import javax.json.JsonObject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 public class Main {
 
     public static void main(String[] args) {
+
         HotTopicsServer hotTopicsServer = new HotTopicsServer();
         try {
             hotTopicsServer.start();
@@ -17,6 +19,7 @@ public class Main {
         } finally {
             hotTopicsServer.stop();
         }
+
     }
 
 }
