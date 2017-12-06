@@ -1,10 +1,6 @@
 package io.benreynolds.hottopics.server;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-
 import org.glassfish.tyrus.server.Server;
-
 import javax.websocket.DeploymentException;
 
 class HotTopicsServer {
@@ -15,9 +11,8 @@ class HotTopicsServer {
 
     private Server mServer;
 
-    HotTopicsServer()
-    {
-        mServer = new Server(HOST_NAME, PORT, ROOT_PATH, EchoEndpoint.class);
+    HotTopicsServer() {
+        mServer = new Server(HOST_NAME, PORT, ROOT_PATH, ChatEndpoint.class);
     }
 
     void start() throws DeploymentException {
