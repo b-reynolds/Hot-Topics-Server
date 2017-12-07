@@ -63,8 +63,7 @@ public class ChatEndpoint {
 
         Map<String, Object> userProperties = session.getUserProperties();
 
-        UnidentifiedPacket unidentifiedPacket = (UnidentifiedPacket)PacketIdentifier.convertToPacket(message,
-                UnidentifiedPacket.class);
+        UnidentifiedPacket unidentifiedPacket = PacketIdentifier.convertToPacket(message, UnidentifiedPacket.class);
 
         if(unidentifiedPacket == null || !unidentifiedPacket.isValid()) {
             mLogger.warn(String.format("[%s] Invalid packet received: \"%s\".", session.getId(), message));
@@ -82,8 +81,8 @@ public class ChatEndpoint {
                 return;
             }
 
-            UsernameRequestPacket usernameRequestPacket = (UsernameRequestPacket)PacketIdentifier.convertToPacket(
-                    message, UsernameRequestPacket.class);
+            UsernameRequestPacket usernameRequestPacket = PacketIdentifier.convertToPacket(message,
+                    UsernameRequestPacket.class);
 
             if(usernameRequestPacket == null || !usernameRequestPacket.isValid()) {
                 sendMessage(new UsernameResponsePacket(false).toString(), session);
@@ -121,8 +120,8 @@ public class ChatEndpoint {
             }
 
             if(unidentifiedPacket.getType() == JoinChatroomRequestPacket.class) {
-                JoinChatroomRequestPacket joinChatroomRequestPacket = (JoinChatroomRequestPacket)PacketIdentifier.
-                        convertToPacket(message, JoinChatroomRequestPacket.class);
+                JoinChatroomRequestPacket joinChatroomRequestPacket = PacketIdentifier.convertToPacket(message,
+                        JoinChatroomRequestPacket.class);
                 if(joinChatroomRequestPacket == null || !joinChatroomRequestPacket.isValid()) {
                     sendMessage(new JoinChatroomResponsePacket(false).toString(), session);
                     return;
@@ -156,8 +155,7 @@ public class ChatEndpoint {
         }
 
         if(unidentifiedPacket.getType() == SendMessagePacket.class) {
-            SendMessagePacket sendMessagePacket = (SendMessagePacket)PacketIdentifier.convertToPacket(message,
-                    SendMessagePacket.class);
+            SendMessagePacket sendMessagePacket = PacketIdentifier.convertToPacket(message, SendMessagePacket.class);
             if(sendMessagePacket == null || !sendMessagePacket.isValid()) {
                 mLogger.warn(String.format("[%s] Invalid packet received: \"%s\".", session.getId(), message));
                 return;

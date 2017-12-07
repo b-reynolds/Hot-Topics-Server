@@ -42,13 +42,15 @@ public class PacketIdentifier {
         }
     }
 
-    public static Packet convertToPacket(String json, Class<? extends Packet> packetType) {
+    public static <T extends Packet> T convertToPacket(final String string, Class<T> packetType) {
+        T packet;
         try {
-            return new Gson().fromJson(json, packetType);
+            packet = new Gson().fromJson(string, packetType);
         }
         catch(JsonSyntaxException exception) {
             return null;
         }
+        return packet != null && packet.isValid() ? packet : null;
     }
 
 }
