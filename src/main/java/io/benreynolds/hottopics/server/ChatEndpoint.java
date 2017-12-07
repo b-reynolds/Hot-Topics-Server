@@ -62,7 +62,7 @@ public class ChatEndpoint {
         }
 
         Map<String, Object> userProperties = session.getUserProperties();
-        Gson gson = new Gson();
+
         UnidentifiedPacket unidentifiedPacket = (UnidentifiedPacket)PacketIdentifier.convertToPacket(message,
                 UnidentifiedPacket.class);
 
@@ -86,21 +86,21 @@ public class ChatEndpoint {
                     message, UsernameRequestPacket.class);
 
             if(usernameRequestPacket == null || !usernameRequestPacket.isValid()) {
-                sendMessage(gson.toJson(new UsernameResponsePacket(false)), session);
+                sendMessage(new UsernameResponsePacket(false).toString(), session);
                 return;
             }
 
             for(Session userSession : mUsers) {
                 if(userSession.getUserProperties().containsKey(PROPERTY_USERNAME)) {
                     if(userSession.getUserProperties().get(PROPERTY_USERNAME).equals(usernameRequestPacket.getUsername())) {
-                        sendMessage(gson.toJson(new UsernameResponsePacket(false)), session);
+                        sendMessage(new UsernameResponsePacket(false).toString(), session);
                         return;
                     }
                 }
             }
 
             userProperties.put(PROPERTY_USERNAME, usernameRequestPacket.getUsername());
-            sendMessage(gson.toJson(new UsernameResponsePacket(true)), session);
+            sendMessage(new UsernameResponsePacket(true).toString(), session);
 
             return;
         }
@@ -116,7 +116,7 @@ public class ChatEndpoint {
             if(unidentifiedPacket.getType() == ChatroomsRequestPacket.class) {
                 ChatroomsResponsePacket chatroomsResponsePacket = new ChatroomsResponsePacket(mChatrooms.toArray(
                         new Chatroom[mChatrooms.size()]));
-                sendMessage(gson.toJson(chatroomsResponsePacket), session);
+                sendMessage(chatroomsResponsePacket.toString(), session);
                 return;
             }
 
@@ -124,7 +124,7 @@ public class ChatEndpoint {
                 JoinChatroomRequestPacket joinChatroomRequestPacket = (JoinChatroomRequestPacket)PacketIdentifier.
                         convertToPacket(message, JoinChatroomRequestPacket.class);
                 if(joinChatroomRequestPacket == null || !joinChatroomRequestPacket.isValid()) {
-                    sendMessage(gson.toJson(new JoinChatroomResponsePacket(false)), session);
+                    sendMessage(new JoinChatroomResponsePacket(false).toString(), session);
                     return;
                 }
 
@@ -132,12 +132,12 @@ public class ChatEndpoint {
                     if(chatroom.getName().equals(joinChatroomRequestPacket.getChatroomName())) {
                         chatroom.addMember(session);
                         userProperties.put(PROPERTY_ROOM, chatroom);
-                        sendMessage(gson.toJson(new JoinChatroomResponsePacket(true)), session);
+                        sendMessage(new JoinChatroomResponsePacket(true).toString(), session);
                         return;
                     }
                 }
 
-                sendMessage(gson.toJson(new JoinChatroomResponsePacket(false)), session);
+                sendMessage(new JoinChatroomResponsePacket(false).toString(), session);
             }
         }
 
@@ -146,11 +146,11 @@ public class ChatEndpoint {
             if(chatroom != null && chatroom.containsMember(session)) {
                 chatroom.removeMember(session);
                 session.getUserProperties().remove(PROPERTY_ROOM);
-                sendMessage(gson.toJson(new LeaveChatroomResponsePacket(true)), session);
+                sendMessage(new LeaveChatroomResponsePacket(true).toString(), session);
                 return;
             }
             else {
-                sendMessage(gson.toJson(new LeaveChatroomResponsePacket(false)), session);
+                sendMessage(new LeaveChatroomResponsePacket(false).toString(), session);
                 return;
             }
         }
@@ -166,7 +166,7 @@ public class ChatEndpoint {
             ReceiveMessagePacket receiveMessagePacket = new ReceiveMessagePacket((String)session.getUserProperties()
                     .get(PROPERTY_USERNAME), sendMessagePacket.getMessage());
             for(Session user : ((Chatroom)userProperties.get(PROPERTY_ROOM)).getMembers()) {
-                sendMessage(gson.toJson(receiveMessagePacket), user);
+                sendMessage(receiveMessagePacket.toString(), user);
             }
         }
     }
