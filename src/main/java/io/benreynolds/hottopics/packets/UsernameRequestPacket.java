@@ -40,7 +40,7 @@ public class UsernameRequestPacket extends Packet {
     @Override
     public boolean isValid() {
         return mId != null && mUsername != null && mUsername.length() > MIN_LENGTH &&
-                mUsername.length() < MAX_LENGTH && mUsername.matches(INVALID_CHARACTER_REGEX);
+                mUsername.length() < MAX_LENGTH && !mUsername.matches(INVALID_CHARACTER_REGEX);
     }
 
     /**
