@@ -54,6 +54,7 @@ public class ChatEndpoint {
 
     @OnMessage
     public void onMessage(String message, Session session) {
+        mLogger.info(String.format("Packet Received: %s", message));
         if(mChatrooms.isEmpty()) {
             Trend[] currentTrends = mTrendManager.getTrends().getTrends();
             for(int i = 0; i < (currentTrends.length < 10 ? currentTrends.length : 10); i++) {
@@ -86,6 +87,7 @@ public class ChatEndpoint {
 
             if(usernameRequestPacket == null || !usernameRequestPacket.isValid()) {
                 sendMessage(new UsernameResponsePacket(false).toString(), session);
+                mLogger.info(String.format("Sent Packet to %s: %s", session.getUserProperties().get(PROPERTY_USERNAME), new UsernameResponsePacket(false).toString()));
                 return;
             }
 
@@ -93,6 +95,7 @@ public class ChatEndpoint {
                 if(userSession.getUserProperties().containsKey(PROPERTY_USERNAME)) {
                     if(userSession.getUserProperties().get(PROPERTY_USERNAME).equals(usernameRequestPacket.getUsername())) {
                         sendMessage(new UsernameResponsePacket(false).toString(), session);
+                        mLogger.info(String.format("Sent Packet to %s: %s", session.getUserProperties().get(PROPERTY_USERNAME), new UsernameResponsePacket(false).toString()));
                         return;
                     }
                 }
@@ -100,7 +103,7 @@ public class ChatEndpoint {
 
             userProperties.put(PROPERTY_USERNAME, usernameRequestPacket.getUsername());
             sendMessage(new UsernameResponsePacket(true).toString(), session);
-
+            mLogger.info(String.format("Sent Packet to %s: %s", session.getUserProperties().get(PROPERTY_USERNAME), new UsernameResponsePacket(true).toString()));
             return;
         }
 
@@ -116,6 +119,7 @@ public class ChatEndpoint {
                 ChatroomsResponsePacket chatroomsResponsePacket = new ChatroomsResponsePacket(mChatrooms.toArray(
                         new Chatroom[mChatrooms.size()]));
                 sendMessage(chatroomsResponsePacket.toString(), session);
+                mLogger.info(String.format("Sent Packet to %s: %s", session.getUserProperties().get(PROPERTY_USERNAME), chatroomsResponsePacket.toString()));
                 return;
             }
 
@@ -124,6 +128,7 @@ public class ChatEndpoint {
                         JoinChatroomRequestPacket.class);
                 if(joinChatroomRequestPacket == null || !joinChatroomRequestPacket.isValid()) {
                     sendMessage(new JoinChatroomResponsePacket(false).toString(), session);
+                    mLogger.info(String.format("Sent Packet to %s: %s", session.getUserProperties().get(PROPERTY_USERNAME), new JoinChatroomResponsePacket(false).toString()));
                     return;
                 }
 
@@ -132,11 +137,13 @@ public class ChatEndpoint {
                         chatroom.addMember(session);
                         userProperties.put(PROPERTY_ROOM, chatroom);
                         sendMessage(new JoinChatroomResponsePacket(true).toString(), session);
+                        mLogger.info(String.format("Sent Packet to %s: %s", session.getUserProperties().get(PROPERTY_USERNAME), new JoinChatroomResponsePacket(true).toString()));
                         return;
                     }
                 }
 
                 sendMessage(new JoinChatroomResponsePacket(false).toString(), session);
+                mLogger.info(String.format("Sent Packet to %s: %s", session.getUserProperties().get(PROPERTY_USERNAME), new JoinChatroomResponsePacket(false).toString()));
             }
         }
 
@@ -146,10 +153,12 @@ public class ChatEndpoint {
                 chatroom.removeMember(session);
                 session.getUserProperties().remove(PROPERTY_ROOM);
                 sendMessage(new LeaveChatroomResponsePacket(true).toString(), session);
+                mLogger.info(String.format("Sent Packet to %s: %s", session.getUserProperties().get(PROPERTY_USERNAME), new LeaveChatroomResponsePacket(true).toString()));
                 return;
             }
             else {
                 sendMessage(new LeaveChatroomResponsePacket(false).toString(), session);
+                mLogger.info(String.format("Sent Packet to %s: %s", session.getUserProperties().get(PROPERTY_USERNAME), new LeaveChatroomResponsePacket(false).toString()));
                 return;
             }
         }
@@ -165,6 +174,7 @@ public class ChatEndpoint {
                     .get(PROPERTY_USERNAME), sendMessagePacket.getMessage());
             for(Session user : ((Chatroom)userProperties.get(PROPERTY_ROOM)).getMembers()) {
                 sendMessage(receiveMessagePacket.toString(), user);
+                mLogger.info(String.format("Sent Packet to %s: %s", session.getUserProperties().get(PROPERTY_USERNAME), receiveMessagePacket.toString()));
             }
         }
     }
