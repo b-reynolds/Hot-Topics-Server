@@ -1,6 +1,5 @@
 package io.benreynolds.hottopics.server;
 
-import javax.json.JsonObject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
