@@ -16,6 +16,10 @@ public class Chatroom {
     /** {@code Set} used to store all users ('{@code Session}'s) that are members of the chatroom. */
     private transient Set<Session> mMembers = Collections.synchronizedSet(new HashSet<Session>());
 
+    /** Amount of users in the Chatroom **/
+    @SerializedName("size")
+    private Integer mSize = 0;
+
     /** Name of the {@code Chatroom}. */
     @SerializedName("name")
     private String mName;
@@ -37,19 +41,21 @@ public class Chatroom {
     /**
      * Adds a {@code Session} to the {@code Chatroom}.
      * @param session {@code Session} to add to the {@code Chatroom}.
-     * @return {@code true} if the {@code Chatroom} did not already contain the {@code Session}.
      */
-    public boolean addMember(final Session session) {
-        return mMembers.add(session);
+    public void addMember(final Session session) {
+        if(mMembers.add(session)) {
+            mSize++;
+        }
     }
 
     /**
      * Removes a {@code Session} from the {@code Chatroom}.
      * @param session {@code Session} to remove from the {@code Chatroom}.
-     * @return {@code true} if the {@code Chatroom} contained the {@code Session}.
      */
-    public boolean removeMember(final Session session) {
-        return mMembers.remove(session);
+    public void removeMember(final Session session) {
+        if(mMembers.remove(session)) {
+            mSize--;
+        }
     }
 
     /**
