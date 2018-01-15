@@ -18,7 +18,7 @@ public class Chatroom {
 
     /** Amount of users in the Chatroom **/
     @SerializedName("size")
-    private Integer mSize;
+    private Integer mSize = 0;
 
     /** Name of the {@code Chatroom}. */
     @SerializedName("name")
