@@ -11,8 +11,9 @@ public class Main {
         try {
             hotTopicsServer.start();
             BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-            System.out.print("Press any key to stop the server.");
-            reader.readLine();
+            while(true) {
+                continue;
+            }
         } catch (Exception exception) {
             exception.printStackTrace();
         } finally {
