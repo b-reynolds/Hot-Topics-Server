@@ -5,6 +5,7 @@ import com.google.gson.annotations.SerializedName;
 /**
  * {code UsernameRequestPacket} sent by client devices when requesting a username.
  */
+
 public class UsernameRequestPacket extends Packet {
 
     /** Attempts to store a the '{@code UsernameRequestPacket}'s ID (as determined by the {@code PacketIdentifier}). */
