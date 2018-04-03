@@ -31,6 +31,12 @@ public class ChatEndpoint {
     private static final String PROPERTY_USERNAME = "Username";
     private static final String PROPERTY_ROOM = "Room";
 
+    private static final String PROPERTY_STATE = "State";
+
+    private static final int STATE_CONNECTED = 0;
+    private static final int STATE_NO_ROOM = 1;
+    private static final int STATE_IN_ROOM = 2;
+
     private static Set<Chatroom> mChatrooms = Collections.synchronizedSet(new HashSet<Chatroom>());
 
     private boolean sendPacket(final Packet packet, final Session session) {
@@ -56,13 +62,32 @@ public class ChatEndpoint {
         mLogger.info(String.format("Received message from [%s]: \"%s\".", session.getId(), message));
 
         UnidentifiedPacket unidentifiedPacket = PacketIdentifier.convertToPacket(message, UnidentifiedPacket.class);
-        if(unidentifiedPacket == null || !unidentifiedPacket.isValid()) {
-            mLogger.warn("Message was not a valid Packet.");
+        if(unidentifiedPacket == null) {
+            mLogger.warn(String.format("Invalid Packet received: \"%s\".", message));
             return;
         }
 
         Class<?> packetType = unidentifiedPacket.getType();
-        mLogger.info(String.format("Message type identified: \"%s\".", packetType.toString()));
+        mLogger.info(String.format("Received Packet: \"%s\".", packetType.toString()));
+
+        int sessionState = (int)session.getUserProperties().get(PROPERTY_STATE);
+
+        if(sessionState == STATE_CONNECTED) {
+            if(packetType != UsernameRequestPacket.class) {
+                mLogger.warn(String.format("Unexpected Packet received, expected \"%s\", received \"%s\".",
+                        UsernameRequestPacket.class.getSimpleName(), packetType.getSimpleName()));
+                return;
+            }
+
+            // ...
+
+            UsernameRequestPacket requestPacket = PacketIdentifier.convertToPacket(message, UsernameRequestPacket.class);
+            if(requestPacket == null || !requestPacket.isValid()) {
+                sendPacket(new UsernameResponsePacket(false), session);
+                return;
+            }
+
+        }
 
         Map<String, Object> userProperties = session.getUserProperties();
 
@@ -83,18 +108,22 @@ public class ChatEndpoint {
 
             for(Session activeSession : mSessions) {
                 Map<String, Object> activeSessionProperties = activeSession.getUserProperties();
-                if(activeSessionProperties.containsKey(PROPERTY_USERNAME)) {
-                    if(((String)(activeSessionProperties.get(PROPERTY_USERNAME))).toUpperCase().equals(requestPacket.
-                            getUsername().toUpperCase())) {
-                        // Username is already in use.
-                        sendPacket(new UsernameResponsePacket(false), session);
-                        return;
-                    }
+                if(!activeSessionProperties.containsKey(PROPERTY_USERNAME)) {
+                    continue;
+                }
+
+                String sessionUsername = (String)activeSessionProperties.get(PROPERTY_USERNAME);
+                if(requestPacket.getUsername().toUpperCase().equals(sessionUsername.toUpperCase())) {
+                    sendPacket(new UsernameResponsePacket(false), session);
+                    return;
                 }
             }
 
             userProperties.put(PROPERTY_USERNAME, requestPacket.getUsername());
+            userProperties.put(PROPERTY_STATE, STATE_NO_ROOM);
+
             sendPacket(new UsernameResponsePacket(true), session);
+
             return;
         }
 
@@ -125,6 +154,7 @@ public class ChatEndpoint {
             if(unidentifiedPacket.getType() == JoinChatroomRequestPacket.class) {
                 JoinChatroomRequestPacket joinChatroomRequestPacket = PacketIdentifier.convertToPacket(message,
                         JoinChatroomRequestPacket.class);
+                // TODO: packets are already valid if not null
                 if(joinChatroomRequestPacket == null || !joinChatroomRequestPacket.isValid()) {
                     sendPacket(new JoinChatroomResponsePacket(false), session);
                     return;
