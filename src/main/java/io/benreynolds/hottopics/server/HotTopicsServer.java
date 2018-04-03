@@ -12,11 +12,12 @@ class HotTopicsServer {
     private Server mServer;
 
     HotTopicsServer() {
-        mServer = new Server(HOST_NAME, PORT, ROOT_PATH, ChatEndpoint.class);
+        mServer = new Server(HOST_NAME, PORT, ROOT_PATH, HotTopicsEndpoint.class);
     }
 
     void start() throws DeploymentException {
         mServer.start();
+
     }
 
     void stop() {
