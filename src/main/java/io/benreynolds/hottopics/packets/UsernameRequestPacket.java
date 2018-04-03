@@ -5,6 +5,7 @@ import com.google.gson.annotations.SerializedName;
 /**
  * {code UsernameRequestPacket} sent by client devices when requesting a username.
  */
+
 public class UsernameRequestPacket extends Packet {
 
     /** Attempts to store a the '{@code UsernameRequestPacket}'s ID (as determined by the {@code PacketIdentifier}). */
@@ -15,7 +16,7 @@ public class UsernameRequestPacket extends Packet {
     public static final String INVALID_CHARACTER_REGEX = "^.*[^a-zA-Z0-9 ].*$";
 
     /** Minimum username length. */
-    public static final int MIN_LENGTH = 4;
+    public static final int MIN_LENGTH = 3;
 
     /** Maximum username length. */
     public static final int MAX_LENGTH = 12;
@@ -39,8 +40,8 @@ public class UsernameRequestPacket extends Packet {
      */
     @Override
     public boolean isValid() {
-        return mId != null && mUsername != null && mUsername.length() > MIN_LENGTH &&
-                mUsername.length() < MAX_LENGTH && !mUsername.matches(INVALID_CHARACTER_REGEX);
+        return mId != null && mUsername != null && mUsername.length() >= MIN_LENGTH &&
+                mUsername.length() <= MAX_LENGTH && !mUsername.matches(INVALID_CHARACTER_REGEX);
     }
 
     /**
