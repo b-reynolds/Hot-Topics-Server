@@ -20,7 +20,7 @@ import java.util.*;
 public class HotTopicsEndpoint {
 
     /** Used for class logging */
-    private final Logger mLogger = LoggerFactory.getLogger(ChatEndpoint.class);
+    private final Logger mLogger = LoggerFactory.getLogger(HotTopicsEndpoint.class);
 
     private static TrendManager mTrendManager = new TrendManager();
 
@@ -28,13 +28,16 @@ public class HotTopicsEndpoint {
     private static final Set<Session> mConnectedClients = Collections.synchronizedSet(new HashSet<Session>());
     /** Synchronized set used to store active chatrooms */
     private static Set<Chatroom> mChatrooms = Collections.synchronizedSet(new HashSet<Chatroom>());
+    /** Synchronized map used to store messages that have been sent in a chatroom */
+    private static Map<Chatroom, LinkedList<ReceiveMessagePacket>> mMessageCache = Collections.synchronizedMap(new HashMap<Chatroom, LinkedList<ReceiveMessagePacket>>());
+
+    private static int MESSAGES_TO_CACHE = 50;
 
     private static final String CLIENT_PROPERTY_STATE = "STATE";
     private static final String CLIENT_PROPERTY_USERNAME = "USERNAME";
     private static final String CLIENT_PROPERTY_CHATROOM = "CHATROOM";
 
-
-    private enum State { UNREGISTERED, REGISTERED, CHATTING };
+    private enum State { UNREGISTERED, REGISTERED, CHATTING }
 
     @OnOpen
     public void onOpen(final Session client) {
@@ -51,11 +54,6 @@ public class HotTopicsEndpoint {
     @OnMessage
     public void onMessage(final String message, final Session client) {
         mLogger.info(String.format("[%s] Received String : \"%s\".", client.getId(), message));
-
-        for(Session session : mConnectedClients) {
-            sendPacket(new ReceiveMessagePacket("Server", message), session);
-        }
-
 
         mLogger.info(String.format("[%s] Attempting to convert string into a Packet instance...", client.getId()));
         UnidentifiedPacket unidentifiedPacket = PacketIdentifier.convertToPacket(message, UnidentifiedPacket.class);
@@ -119,6 +117,17 @@ public class HotTopicsEndpoint {
         }
     }
 
+    private void sendUpdatedChatroomsList() {
+        // Resend the chatroom list to users in the REGISTERED state so that the amount of users in each room is updated
+        ChatroomsResponsePacket chatroomsResponsePacket = new ChatroomsResponsePacket(mChatrooms.toArray(new Chatroom[mChatrooms.size()]));
+        for(Session connectedClient : mConnectedClients) {
+            if(connectedClient.getUserProperties().get(CLIENT_PROPERTY_STATE) == State.REGISTERED) {
+                sendPacket(chatroomsResponsePacket, connectedClient);
+            }
+        }
+
+    }
+
     private void processUsernameRequest(Session client, UsernameRequestPacket packet) {
         mLogger.info(String.format("[%s] Processing [%s]...", client.getId(), UsernameRequestPacket.class.getSimpleName()));
         if(packet == null) {
@@ -179,11 +188,28 @@ public class HotTopicsEndpoint {
                 chatroom.addMember(client);
                 sendPacket(new JoinChatroomResponsePacket(true), client);
                 mLogger.info(String.format("[%s] Entered chatroom [%s]...", client.getId(), chatroom.getName()));
+
+                sendUpdatedChatroomsList();
+
+                try {
+                    Thread.sleep(2500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                LinkedList<ReceiveMessagePacket> roomMessages = mMessageCache.get(chatroom);
+                for(ReceiveMessagePacket receiveMessagePacket : roomMessages) {
+                    if(receiveMessagePacket != null) {
+                        sendPacket(receiveMessagePacket, client);
+                    }
+                }
+
                 return;
             }
         }
 
         sendPacket(new JoinChatroomResponsePacket(false), client);
+
     }
 
     private void processSendMessageRequest(Session client, SendMessagePacket packet) {
@@ -195,7 +221,11 @@ public class HotTopicsEndpoint {
 
         mLogger.info(String.format("[%s] Sending message to all clients in room [%s]...", client.getId(), ((Chatroom)client.getUserProperties().get(CLIENT_PROPERTY_CHATROOM)).getName()));
         ReceiveMessagePacket receiveMessagePacket = new ReceiveMessagePacket((String)client.getUserProperties().get(CLIENT_PROPERTY_USERNAME), packet.getMessage());
-        for(Session clientInRoom : ((Chatroom)client.getUserProperties().get(CLIENT_PROPERTY_CHATROOM)).getMembers()) {
+
+        Chatroom chatroom = ((Chatroom)client.getUserProperties().get(CLIENT_PROPERTY_CHATROOM));
+        chatroom.addMessage(receiveMessagePacket);
+
+        for(Session clientInRoom : chatroom.getMembers()) {
             sendPacket(receiveMessagePacket, clientInRoom);
         }
     }
@@ -214,6 +244,7 @@ public class HotTopicsEndpoint {
             client.getUserProperties().put(CLIENT_PROPERTY_CHATROOM, null);
             client.getUserProperties().put(CLIENT_PROPERTY_STATE, State.REGISTERED);
             sendPacket(new LeaveChatroomResponsePacket(true), client);
+            sendUpdatedChatroomsList();
             return;
         }
 
