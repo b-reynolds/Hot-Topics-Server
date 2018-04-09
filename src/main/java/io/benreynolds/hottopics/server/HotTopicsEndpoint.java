@@ -191,10 +191,10 @@ public class HotTopicsEndpoint {
 
                 sendUpdatedChatroomsList();
 
-                try {
-                    Thread.sleep(2500);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                // Update chatting users with the amount of users in the room
+                ChatroomUserCountUpdatePacket chatroomUserCountUpdatePacket = new ChatroomUserCountUpdatePacket(chatroom.getMembers().size());
+                for(Session chattingUser : chatroom.getMembers()) {
+                    sendPacket(chatroomUserCountUpdatePacket, chattingUser);
                 }
 
                 LinkedList<ReceiveMessagePacket> roomMessages = mMessageCache.get(chatroom);
@@ -245,6 +245,13 @@ public class HotTopicsEndpoint {
             client.getUserProperties().put(CLIENT_PROPERTY_STATE, State.REGISTERED);
             sendPacket(new LeaveChatroomResponsePacket(true), client);
             sendUpdatedChatroomsList();
+
+            // Update chatting users with the amount of users in the room
+            ChatroomUserCountUpdatePacket chatroomUserCountUpdatePacket = new ChatroomUserCountUpdatePacket(chatroom.getMembers().size());
+            for(Session chattingUser : chatroom.getMembers()) {
+                sendPacket(chatroomUserCountUpdatePacket, chattingUser);
+            }
+
             return;
         }
 
