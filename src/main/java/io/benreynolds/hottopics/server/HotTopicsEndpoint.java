@@ -27,7 +27,7 @@ public class HotTopicsEndpoint {
     /** Synchronized set used to store client sessions */
     private static final Set<Session> mConnectedClients = Collections.synchronizedSet(new HashSet<Session>());
     /** Synchronized set used to store active chatrooms */
-    private static Set<Chatroom> mChatrooms = Collections.synchronizedSet(new HashSet<Chatroom>());
+    private static List<Chatroom> mChatrooms = Collections.synchronizedList(new ArrayList<Chatroom>());
     /** Synchronized map used to store messages that have been sent in a chatroom */
     private static Map<Chatroom, LinkedList<ReceiveMessagePacket>> mMessageCache = Collections.synchronizedMap(new HashMap<Chatroom, LinkedList<ReceiveMessagePacket>>());
 
@@ -103,8 +103,9 @@ public class HotTopicsEndpoint {
     private void populateChatrooms() {
         mChatrooms.clear();
         Trend[] currentTrends = mTrendManager.getTrends().getTrends();
-        for(int i = 0; i < (currentTrends.length < 10 ? currentTrends.length : 10); i++) {
+        for(int i = 0; i < currentTrends.length; i++) {
             mChatrooms.add(new Chatroom(currentTrends[i].getName()));
+            System.out.println(i + ": " + mChatrooms.get(i).getName());
         }
     }
 
