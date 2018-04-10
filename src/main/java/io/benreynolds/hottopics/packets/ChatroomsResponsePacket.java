@@ -17,6 +17,7 @@ public class ChatroomsResponsePacket extends Packet {
     @SerializedName("chatrooms")
     private Chatroom[] mChatrooms;
 
+
     /**
      * @param chatrooms '{@code Chatroom}'s that are available for clients to join.
      */
