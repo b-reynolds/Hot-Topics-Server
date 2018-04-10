@@ -98,4 +98,8 @@
             return mMessages;
         }
 
+        public int getSize() {
+            return mSize;
+        }
+
     }

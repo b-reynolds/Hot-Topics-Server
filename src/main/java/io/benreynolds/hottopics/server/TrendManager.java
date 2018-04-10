@@ -1,10 +1,11 @@
 package io.benreynolds.hottopics.server;
 
-import twitter4j.Trends;
-import twitter4j.Twitter;
-import twitter4j.TwitterException;
-import twitter4j.TwitterFactory;
+import twitter4j.*;
 import twitter4j.auth.AccessToken;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * {@code TrendManager} uses the Twitter4J Twitter API library to manage the retrieval of Twitter trend information.
@@ -16,10 +17,10 @@ class TrendManager {
     /**
      * Twitter API credentials.
      */
-    private static final String TWITTER_API_CONSUMER_KEY = "";
-    private static final String TWITTER_API_CONSUMER_SECRET = "";
-    private static final String TWITTER_API_ACCESS_TOKEN = "";
-    private static final String TWITTER_API_ACCESS_TOKEN_SECRET = "";
+    private static final String TWITTER_API_CONSUMER_KEY = "Rd8GWyv2VtOgMrNpIPZ88O6fz";
+    private static final String TWITTER_API_CONSUMER_SECRET = "XkkNnkqpAAk07631WDviixrDWRWdyXSOrkzP3oqSLW7eLUaQrb";
+    private static final String TWITTER_API_ACCESS_TOKEN = "896337305929216000-9UvshreR164n1LPZgzqFS1mJ2mWxYij";
+    private static final String TWITTER_API_ACCESS_TOKEN_SECRET = "HnQL1g6sFBLPkyWjdLMiCihYTck1fS86t9c5IzoBK16Vq";
 
     /**
      * Where On Earth Identifier (WOEID) that represents the location that will be searched for trends.
@@ -60,12 +61,16 @@ class TrendManager {
         mRequestLimiter = new Timer(SECONDS_IN_MINUTE / MAX_REQUESTS_PER_MINUTE);
     }
 
+    public boolean newTrendsAvailable() {
+        return (mTrends == null || mRequestLimiter.hasElapsed());
+    }
+
     /**
      * Returns a {@code Trends} instance containing current '{@code Trend}'s in {@code WOEID}.
      * @return {@code Trends} instance containing current '{@code Trend}'s in {@code WOEID}. If an exception occurs,
      * returns {@code null}.
      */
-    Trends getTrends() {
+    ArrayList<Trend> getTrends() {
         // If no trends are currently cached or those that are cached require updating.
         if(mTrends == null || mRequestLimiter.hasElapsed()) {
             try {
@@ -78,7 +83,8 @@ class TrendManager {
             // Reset the timer so that trends are not received again until the set period has passed.
             mRequestLimiter.start();
         }
-        return mTrends;
+
+        return new ArrayList<>(Arrays.asList(mTrends.getTrends()));
     }
 
 }

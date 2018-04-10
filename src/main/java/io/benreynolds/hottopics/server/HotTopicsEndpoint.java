@@ -20,9 +20,9 @@ import java.util.*;
 public class HotTopicsEndpoint {
 
     /** Used for class logging */
-    private final Logger mLogger = LoggerFactory.getLogger(HotTopicsEndpoint.class);
+    private static final Logger mLogger = LoggerFactory.getLogger(HotTopicsEndpoint.class);
 
-    private static TrendManager mTrendManager = new TrendManager();
+    private static final TrendManager mTrendManager = new TrendManager();
 
     /** Synchronized set used to store client sessions */
     private static final Set<Session> mConnectedClients = Collections.synchronizedSet(new HashSet<Session>());
@@ -39,11 +39,14 @@ public class HotTopicsEndpoint {
 
     private enum State { UNREGISTERED, REGISTERED, CHATTING }
 
+    private static Thread tUpdateTrends;
+
     @OnOpen
     public void onOpen(final Session client) {
 
-        if(mChatrooms.isEmpty()) {
-            populateChatrooms();
+        if(tUpdateTrends == null) {
+            tUpdateTrends = new Thread(new UpdateTrendsTask());
+            tUpdateTrends.start();
         }
 
         client.getUserProperties().put(CLIENT_PROPERTY_STATE, State.UNREGISTERED);
@@ -102,31 +105,20 @@ public class HotTopicsEndpoint {
 
     private void populateChatrooms() {
         mChatrooms.clear();
-        Trend[] currentTrends = mTrendManager.getTrends().getTrends();
-        for(int i = 0; i < currentTrends.length; i++) {
-            mChatrooms.add(new Chatroom(currentTrends[i].getName()));
+        ArrayList<Trend> currentTrends = mTrendManager.getTrends();
+        for(int i = 0; i < currentTrends.size(); i++) {
+            mChatrooms.add(new Chatroom(currentTrends.get(i).getName()));
             System.out.println(i + ": " + mChatrooms.get(i).getName());
         }
     }
 
-    private void sendPacket(final Packet packet, final Session client) {
+    private static void sendPacket(final Packet packet, final Session client) {
         mLogger.info(String.format("[%s] Sending [%s].", client.getId(), packet.getClass().getSimpleName()));
         try {
             client.getBasicRemote().sendText(packet.toString());
         } catch (IOException e) {
             mLogger.warn(String.format("[%s] Failed to send Packet", client.getId()));
         }
-    }
-
-    private void sendUpdatedChatroomsList() {
-        // Resend the chatroom list to users in the REGISTERED state so that the amount of users in each room is updated
-        ChatroomsResponsePacket chatroomsResponsePacket = new ChatroomsResponsePacket(mChatrooms.toArray(new Chatroom[mChatrooms.size()]));
-        for(Session connectedClient : mConnectedClients) {
-            if(connectedClient.getUserProperties().get(CLIENT_PROPERTY_STATE) == State.REGISTERED) {
-                sendPacket(chatroomsResponsePacket, connectedClient);
-            }
-        }
-
     }
 
     private void processUsernameRequest(Session client, UsernameRequestPacket packet) {
@@ -258,4 +250,127 @@ public class HotTopicsEndpoint {
 
         sendPacket(new LeaveChatroomResponsePacket(false), client);
     }
+
+
+    private static void sendUpdatedChatroomsList() {
+        // Resend the chatroom list to users in the REGISTERED state so that the amount of users in each room is updated
+        ChatroomsResponsePacket chatroomsResponsePacket = new ChatroomsResponsePacket(mChatrooms.toArray(new Chatroom[mChatrooms.size()]));
+        for(Session connectedClient : mConnectedClients) {
+            if(connectedClient.getUserProperties().get(CLIENT_PROPERTY_STATE) == State.REGISTERED) {
+                sendPacket(chatroomsResponsePacket, connectedClient);
+            }
+        }
+    }
+
+    private static void refreshChatroomList() {
+
+        String methodName = new Object() {}
+                .getClass()
+                .getEnclosingMethod()
+                .getName();
+
+        mLogger.info(String.format("[%s]: Retrieving latest trend data and updating chatrooms...", methodName));
+
+        // Request an updated list of currently trending events
+        ArrayList<Trend> trendingTopics = mTrendManager.getTrends();
+
+        mLogger.info(String.format("[%s]: Retrieved %s trends.", methodName, trendingTopics.size()));
+
+        // If this is the first time a request has been made, populate the chatrooms list with the retrieved trends.
+        if(mChatrooms.isEmpty()) {
+            mLogger.info(String.format("[%s]: There are currently no chatrooms, adding chatrooms for all trends...", methodName));
+            for(Trend trend : trendingTopics) {
+                mChatrooms.add(new Chatroom(trend.getName()));
+            }
+            mLogger.info(String.format("[%s]: Added %s chatrooms.", methodName, mChatrooms.size()));
+        }
+        else {
+
+            // Remove chatrooms that are no longer trending and are empty
+            mLogger.info(String.format("[%s]: Checking for outdated and empty chatrooms...", methodName));
+            for (int i = 0; i < mChatrooms.size(); i++) {
+                boolean chatroomStillTrending = false;
+                for (Trend trendingTopic : trendingTopics) {
+                    if (mChatrooms.get(i).getName().equals(trendingTopic.getName())) {
+                        chatroomStillTrending = true;
+                        break;
+                    }
+                }
+
+                if (!chatroomStillTrending && mChatrooms.get(i).getSize() == 0) {
+                    mLogger.info(String.format("[%s]: Removing chatroom \"%s\"...", methodName, mChatrooms.get(i).getName()));
+                    mChatrooms.remove(i);
+                }
+            }
+
+            // Add chatrooms for new trends
+            mLogger.info(String.format("[%s]: Creating chatrooms for new trends...", methodName));
+            for (Trend trendingTopic : trendingTopics) {
+                boolean chatroomExistsForTrend = false;
+                for (Chatroom chatroom : mChatrooms) {
+                    if (chatroom.getName().equals(trendingTopic.getName())) {
+                        chatroomExistsForTrend = true;
+                        break;
+                    }
+                }
+
+                if (!chatroomExistsForTrend) {
+                    mLogger.info(String.format("[%s]: Creating chatroom for trend \"%s\"...", methodName, trendingTopic.getName()));
+                    mChatrooms.add(new Chatroom(trendingTopic.getName()));
+                }
+            }
+        }
+
+        sendUpdatedChatroomsList();
+    }
+
+
+    // IF TREND_UPDATE_RATE == ELAPSED
+    //     GET NEW TRENDS
+    //     UPDATE CHATROOM LIST
+    //     PUSH NEW CHATROOMS
+    //
+
+
+
+    private static class UpdateTrendsTask implements Runnable {
+
+        private static int MILLISECONDS_IN_SECOND = 1000;
+        private static int SECONDS_IN_MINUTE = 60;
+
+        private static int TREND_UPDATE_RATE_MINUTES = 1;
+
+
+        private static Timer mUpdateTimer;
+
+        @Override
+        public void run() {
+
+            refreshChatroomList();
+
+            mUpdateTimer = new Timer(SECONDS_IN_MINUTE * TREND_UPDATE_RATE_MINUTES);
+            mUpdateTimer.start();
+
+            while(!Thread.interrupted()) {
+
+                mLogger.info(String.format("Time Before Trend Update: %s minutes.", Math.round(mUpdateTimer.getTimeRemaining() / SECONDS_IN_MINUTE)));
+
+                if(mUpdateTimer.hasElapsed()) {
+                    refreshChatroomList();
+                    mUpdateTimer.start();
+                }
+
+                try {
+                    Thread.sleep(MILLISECONDS_IN_SECOND * SECONDS_IN_MINUTE);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+
+        }
+
+
+    }
+
 }
