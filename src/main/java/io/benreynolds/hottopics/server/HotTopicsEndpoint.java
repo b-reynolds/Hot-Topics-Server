@@ -6,15 +6,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import twitter4j.Trend;
 
-import javax.websocket.OnClose;
-import javax.websocket.OnMessage;
-import javax.websocket.OnOpen;
-
-import javax.websocket.Session;
+import javax.websocket.*;
 
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.LocalTime;
 import java.util.*;
+
+import static java.time.temporal.ChronoUnit.MINUTES;
+
+/* TODO:
+
+    1.) If a message hasn't been received from a client in X seconds, send an acknowledgement request.
+        If a response is not received within Y seconds, disconnect the client.
+
+    2.) Address CPU usage issue (Threads?)
+
+*/
 
 @ServerEndpoint("/chat")
 public class HotTopicsEndpoint {
@@ -37,9 +46,15 @@ public class HotTopicsEndpoint {
     private static final String CLIENT_PROPERTY_USERNAME = "USERNAME";
     private static final String CLIENT_PROPERTY_CHATROOM = "CHATROOM";
 
+    private static final String CLIENT_PROPERTY_ACK_REQUIRED = "ACK_REQUIRED";
+    private static final String CLIENT_PROPERTY_ACK_SENT_TIME = "ACK_SENT_TIME";
+    private static final String CLIENT_PROPERTY_LAST_MESSAGE = "LAST_MESSAGE";
+
     private enum State { UNREGISTERED, REGISTERED, CHATTING }
 
     private static Thread tUpdateTrends;
+    private static Thread tRemoveInactiveConnections;
+
 
     @OnOpen
     public void onOpen(final Session client) {
@@ -49,7 +64,16 @@ public class HotTopicsEndpoint {
             tUpdateTrends.start();
         }
 
+        if(tRemoveInactiveConnections == null) {
+            tRemoveInactiveConnections = new Thread(new RemoveInactiveConnectionsTask());
+            tRemoveInactiveConnections.start();
+        }
+
         client.getUserProperties().put(CLIENT_PROPERTY_STATE, State.UNREGISTERED);
+        client.getUserProperties().put(CLIENT_PROPERTY_LAST_MESSAGE, LocalTime.now());
+        client.getUserProperties().put(CLIENT_PROPERTY_ACK_REQUIRED, false);
+
+
         mConnectedClients.add(client);
         mLogger.info(String.format("[%s] Client connected [%s active session(s)].", client.getId(), mConnectedClients.size()));
     }
@@ -57,6 +81,9 @@ public class HotTopicsEndpoint {
     @OnMessage
     public void onMessage(final String message, final Session client) {
         mLogger.info(String.format("[%s] Received String : \"%s\".", client.getId(), message));
+
+        client.getUserProperties().put(CLIENT_PROPERTY_LAST_MESSAGE, LocalTime.now());
+        client.getUserProperties().put(CLIENT_PROPERTY_ACK_REQUIRED, false);
 
         mLogger.info(String.format("[%s] Attempting to convert string into a Packet instance...", client.getId()));
         UnidentifiedPacket unidentifiedPacket = PacketIdentifier.convertToPacket(message, UnidentifiedPacket.class);
@@ -73,7 +100,7 @@ public class HotTopicsEndpoint {
                 if(packetType == UsernameRequestPacket.class)
                     processUsernameRequest(client, PacketIdentifier.convertToPacket(message, UsernameRequestPacket.class));
                 else
-                    mLogger.warn(String.format("[%s] Invalid Packet received for client's active state", client.getId()));
+                    mLogger.warn(String.format("[%s] Unexpected Packet received for client's active state", client.getId()));
                 break;
             case REGISTERED:
                 if(packetType == ChatroomsRequestPacket.class)
@@ -81,7 +108,7 @@ public class HotTopicsEndpoint {
                 else if(packetType == JoinChatroomRequestPacket.class)
                     processJoinChatroomRequest(client, PacketIdentifier.convertToPacket(message, JoinChatroomRequestPacket.class));
                 else
-                    mLogger.warn(String.format("[%s] Invalid Packet received for client's active state", client.getId()));
+                    mLogger.warn(String.format("[%s] Unexpected Packet received for client's active state", client.getId()));
                 break;
             case CHATTING:
                 if(packetType == SendMessagePacket.class)
@@ -89,7 +116,7 @@ public class HotTopicsEndpoint {
                 else if(packetType == LeaveChatroomRequestPacket.class)
                     processLeaveChatroomRequest(client, PacketIdentifier.convertToPacket(message, LeaveChatroomRequestPacket.class));
                 else
-                    mLogger.warn(String.format("[%s] Invalid Packet received for client's active state", client.getId()));
+                    mLogger.warn(String.format("[%s] Unexpected Packet received for client's active state", client.getId()));
                 break;
         }
     }
@@ -251,6 +278,30 @@ public class HotTopicsEndpoint {
         sendPacket(new LeaveChatroomResponsePacket(false), client);
     }
 
+    private static void disconnectClient(Session client) {
+        Map<String, Object> clientProperties = client.getUserProperties();
+        if(clientProperties.get(CLIENT_PROPERTY_CHATROOM) != null) {
+            Chatroom clientChatroom = (Chatroom)clientProperties.get(CLIENT_PROPERTY_CHATROOM);
+            clientChatroom.removeMember(client);
+            sendUpdatedChatroomsList();
+
+            if(clientChatroom.getSize() > 0) {
+                // Update chatting users with the amount of users in the room
+                ChatroomUserCountUpdatePacket chatroomUserCountUpdatePacket = new ChatroomUserCountUpdatePacket(clientChatroom.getSize());
+                for(Session chattingUser : clientChatroom.getMembers()) {
+                    sendPacket(chatroomUserCountUpdatePacket, chattingUser);
+                }
+            }
+        }
+
+        try {
+            client.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        mConnectedClients.remove(client);
+    }
 
     private static void sendUpdatedChatroomsList() {
         // Resend the chatroom list to users in the REGISTERED state so that the amount of users in each room is updated
@@ -324,28 +375,16 @@ public class HotTopicsEndpoint {
         sendUpdatedChatroomsList();
     }
 
-
-    // IF TREND_UPDATE_RATE == ELAPSED
-    //     GET NEW TRENDS
-    //     UPDATE CHATROOM LIST
-    //     PUSH NEW CHATROOMS
-    //
-
-
-
     private static class UpdateTrendsTask implements Runnable {
 
-        private static int MILLISECONDS_IN_SECOND = 1000;
-        private static int SECONDS_IN_MINUTE = 60;
-
-        private static int TREND_UPDATE_RATE_MINUTES = 1;
-
+        private static final int MILLISECONDS_IN_SECOND = 1000;
+        private static final int SECONDS_IN_MINUTE = 60;
+        private static final int TREND_UPDATE_RATE_MINUTES = 1;
 
         private static Timer mUpdateTimer;
 
         @Override
         public void run() {
-
             refreshChatroomList();
 
             mUpdateTimer = new Timer(SECONDS_IN_MINUTE * TREND_UPDATE_RATE_MINUTES);
@@ -366,10 +405,63 @@ public class HotTopicsEndpoint {
                     e.printStackTrace();
                 }
             }
-
-
         }
 
+    }
+
+    private static class RemoveInactiveConnectionsTask implements Runnable {
+
+        private static long TIME_BEFORE_ACK_REQUIRED_MILLIS = 30000;
+        private static long TIME_BEFORE_ACK_FAILED_MILLIS = 10000;
+
+        @Override
+        public void run() {
+
+            String methodName = new Object() {}
+                    .getClass()
+                    .getEnclosingMethod()
+                    .getName();
+
+            LinkedList<Session> clientsToDiscconect = new LinkedList<>();
+
+            while(true) {
+
+                mLogger.info(String.format("[%s]: Attempting to remove inactive connections...", methodName));
+
+                LocalTime currentTime = LocalTime.now();
+                for (Session client : mConnectedClients) {
+                    LocalTime lastMessageTime = (LocalTime) client.getUserProperties().get(CLIENT_PROPERTY_LAST_MESSAGE);
+                    if ((boolean) client.getUserProperties().get(CLIENT_PROPERTY_ACK_REQUIRED)) {
+                        LocalTime acknowledgementRequestTime = (LocalTime) client.getUserProperties().get(CLIENT_PROPERTY_ACK_SENT_TIME);
+                        if (Duration.between(lastMessageTime, acknowledgementRequestTime).toMillis() > TIME_BEFORE_ACK_FAILED_MILLIS) {
+                            clientsToDiscconect.add(client);
+                            continue;
+                        }
+                    }
+
+                    if (Duration.between(lastMessageTime, currentTime).toMillis() > TIME_BEFORE_ACK_REQUIRED_MILLIS) {
+                        client.getUserProperties().put(CLIENT_PROPERTY_ACK_REQUIRED, true);
+                        client.getUserProperties().put(CLIENT_PROPERTY_ACK_SENT_TIME, currentTime);
+                        sendPacket(new AcknowledgementRequestPacket(), client);
+                        mLogger.info(String.format("[%s]: Client \"%s\" was sent an acknowledgement request.", methodName, client.getUserProperties().get(CLIENT_PROPERTY_USERNAME)));
+                    }
+                }
+
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                while(!clientsToDiscconect.isEmpty()) {
+                    Session clientToDisconnect = clientsToDiscconect.poll();
+                    disconnectClient(clientToDisconnect);
+                    mLogger.info(String.format("[%s]: Disconnected client \"%s\"", methodName, clientToDisconnect.getUserProperties().get(CLIENT_PROPERTY_USERNAME)));
+                }
+
+            }
+
+        }
 
     }
 

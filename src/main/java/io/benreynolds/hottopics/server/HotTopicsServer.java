@@ -12,7 +12,7 @@ class HotTopicsServer {
     private Server mServer;
 
     HotTopicsServer() {
-        mServer = new Server(HOST_NAME, PORT, ROOT_PATH, HotTopicsEndpoint.class);
+        mServer = new Server(HOST_NAME, PORT, ROOT_PATH, Endpoint.class);
     }
 
     void start() throws DeploymentException {
