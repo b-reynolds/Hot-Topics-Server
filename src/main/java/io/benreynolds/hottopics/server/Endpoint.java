@@ -51,9 +51,15 @@ public class Endpoint {
         LOGGER.info(String.format("[%s] Successfully identified message as a valid packet of type \"%s\".", session.getId(), packetType.getSimpleName()));
 
         // Handle the Packet.
+        Client sender = CONNECTED_CLIENTS.get(session);
         for(PacketHandler packetHandler : PACKET_HANDLERS) {
             if(packetHandler.getType().equals(packetType)) {
-                packetHandler.handlePacket(PacketIdentifier.convertToPacket(message, packetHandler.getType()), CONNECTED_CLIENTS.get(session), CONNECTED_CLIENTS, CHATROOMS);
+                if(packetHandler.getRequiredStates().contains(sender.getState())) {
+                    packetHandler.handlePacket(PacketIdentifier.convertToPacket(message, packetHandler.getType()), sender, CONNECTED_CLIENTS, CHATROOMS);
+                }
+                else {
+                    LOGGER.warn(String.format("[%s] Unexpected packet received for client's current state.", session.getId()));
+                }
             }
         }
     }
