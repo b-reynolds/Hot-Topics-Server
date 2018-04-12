@@ -20,7 +20,7 @@
         private static final int MESSAGES_TO_CACHE = 50;
 
         /** {@code Set} used to store all users ('{@code Session}'s) that are members of the chatroom. */
-        private transient Set<Session> mMembers = Collections.synchronizedSet(new HashSet<Session>());
+        private transient Set<Client> mClients = Collections.synchronizedSet(new HashSet<Client>());
 
         /** Amount of users in the Chatroom **/
         @SerializedName("size")
@@ -44,36 +44,36 @@
         /** Returns a {@code Set} containing all users ('{@code Session}'s) that are members of the chatroom.
          * @return {@code Set} containing all users ('{@code Session}'s) that are members of the chatroom.
          */
-        public Set<Session> getMembers() {
-            return mMembers;
+        public Set<Client> getClients() {
+            return mClients;
         }
 
         /**
          * Adds a {@code Session} to the {@code Chatroom}.
-         * @param session {@code Session} to add to the {@code Chatroom}.
+         * @param client {@code Session} to add to the {@code Chatroom}.
          */
-        public void addMember(final Session session) {
-            if(mMembers.add(session)) {
+        public void addClient(final Client client) {
+            if(mClients.add(client)) {
                 mSize++;
             }
         }
 
         /**
          * Removes a {@code Session} from the {@code Chatroom}.
-         * @param session {@code Session} to remove from the {@code Chatroom}.
+         * @param client {@code Session} to remove from the {@code Chatroom}.
          */
-        public void removeMember(final Session session) {
-            if(mMembers.remove(session)) {
+        public void removeClient(final Client client) {
+            if(mClients.remove(client)) {
                 mSize--;
             }
         }
 
         /**
-         * @param session {@code Session} to search for in the {@code Chatroom}.
+         * @param client {@code Session} to search for in the {@code Chatroom}.
          * @return {@code true} if the {@code Chatroom} contained the {@code Session}.
          */
-        public boolean containsMember(final Session session) {
-            return mMembers.contains(session);
+        public boolean containsClient(final Client client) {
+            return mClients.contains(client);
         }
 
         /** Returns the name of the {@code Chatroom}.

@@ -28,7 +28,7 @@ public class UsernameRequestPacketHandler implements PacketHandler<UsernameReque
         // Ensure that the received Packet is non-null and valid.
         UsernameRequestPacket usernameRequestPacket = (UsernameRequestPacket)packet;
         if(usernameRequestPacket == null || !usernameRequestPacket.isValid()) {
-            LOGGER.info(String.format("[%s] Invalid [%s] received.", sender.getSession().getId(), UsernameRequestPacket.class.getSimpleName()));
+            LOGGER.info(String.format("[%s] Invalid \"%s\" provided, failed to handle.", sender.getSession().getId(), UsernameRequestPacket.class.getSimpleName()));
             sender.sendPacket(new UsernameResponsePacket(false));
             return;
         }

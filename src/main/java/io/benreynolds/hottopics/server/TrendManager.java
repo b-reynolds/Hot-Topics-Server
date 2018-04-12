@@ -59,6 +59,7 @@ class TrendManager {
 
         // Set the '{@code Timer}'s interval such that the trend request limit will not be exceeded.
         mRequestLimiter = new Timer(SECONDS_IN_MINUTE / MAX_REQUESTS_PER_MINUTE);
+        getTrends();
     }
 
     public boolean newTrendsAvailable() {
