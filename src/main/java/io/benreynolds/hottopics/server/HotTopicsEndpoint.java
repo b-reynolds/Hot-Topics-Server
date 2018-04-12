@@ -71,7 +71,9 @@ public class HotTopicsEndpoint {
         // Handle the Packet.
         Client sender = CONNECTED_CLIENTS.get(session);
         sender.setLastMessageTime(LocalTime.now());
-        LOGGER.info("Client State: " + sender.getState().toString());
+        if(packetType == AcknowledgementResponsePacket.class) {
+            return;
+        }
 
         for(PacketHandler packetHandler : PACKET_HANDLERS) {
             if(packetHandler.getType().equals(packetType)) {

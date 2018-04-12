@@ -40,8 +40,6 @@ public class SendMessagePacketHandler implements PacketHandler<SendMessagePacket
         for(Client client : chatroom.getClients()) {
             client.sendPacket(receiveMessagePacket);
         }
-
-        HotTopicsEndpoint.disconnectClient(sender);
     }
 
     @Override
