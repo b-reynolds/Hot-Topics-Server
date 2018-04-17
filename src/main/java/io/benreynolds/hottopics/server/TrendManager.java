@@ -17,10 +17,10 @@ class TrendManager {
     /**
      * Twitter API credentials.
      */
-    private static final String TWITTER_API_CONSUMER_KEY = "***REMOVED***";
-    private static final String TWITTER_API_CONSUMER_SECRET = "***REMOVED***";
-    private static final String TWITTER_API_ACCESS_TOKEN = "***REMOVED***";
-    private static final String TWITTER_API_ACCESS_TOKEN_SECRET = "***REMOVED***";
+    private static final String TWITTER_API_CONSUMER_KEY = "";
+    private static final String TWITTER_API_CONSUMER_SECRET = "";
+    private static final String TWITTER_API_ACCESS_TOKEN = "";
+    private static final String TWITTER_API_ACCESS_TOKEN_SECRET = "";
 
     /**
      * Where On Earth Identifier (WOEID) that represents the location that will be searched for trends.
